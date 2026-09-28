@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check scripts and configuration
         run: |
@@ -37,7 +37,7 @@ jobs:
           sha256sum "$archive"
 
       - name: Upload ZIP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: droidspaces-lan-ip-zip
           path: dist/*.zip
@@ -50,7 +50,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: droidspaces-lan-ip-zip
           path: dist
