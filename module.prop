@@ -1,0 +1,6 @@
+id=droidspaces-lan-ip
+name=Droidspaces LAN IP
+version=1.0.0
+versionCode=100
+author=yashoswalyo
+description=Assign routed Wi-Fi LAN addresses to Droidspaces NAT containers

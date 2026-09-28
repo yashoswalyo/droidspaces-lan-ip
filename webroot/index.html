@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101a28" />
+    <title>Droidspaces LAN IP</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">DROIDSPACES · NETWORKING</p>
+          <h1>LAN addresses</h1>
+          <p class="intro">Give each NAT container a reachable address on this Wi-Fi network.</p>
+        </div>
+        <button id="refresh" class="icon-button" type="button" aria-label="Refresh containers" title="Refresh">↻</button>
+      </header>
+
+      <section class="network-card" aria-label="Phone network">
+        <div class="network-icon" aria-hidden="true">⌁</div>
+        <div>
+          <span class="label">PHONE WI-FI</span>
+          <strong id="phone-address">Checking…</strong>
+          <small id="daemon-status">Checking Droidspaces daemon…</small>
+        </div>
+      </section>
+
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+      <section aria-labelledby="container-heading">
+        <div class="section-heading">
+          <h2 id="container-heading">NAT containers</h2>
+          <span id="container-count" class="count"></span>
+        </div>
+        <div id="containers" class="container-list"><p class="empty">Loading containers…</p></div>
+      </section>
+
+      <section id="saved-section" class="saved-section" aria-labelledby="saved-heading" hidden>
+        <div class="section-heading"><h2 id="saved-heading">Saved for other modes</h2></div>
+        <p class="helper">These mappings are inactive because their containers are no longer in NAT mode. You can remove them here.</p>
+        <div id="saved-list" class="container-list"></div>
+      </section>
+
+      <p class="footnote">Use an unused IP on the phone's current Wi-Fi subnet. Reserve it outside your router's DHCP pool. Saved addresses apply when Droidspaces and the container are running.</p>
+    </main>
+  </body>
+</html>
