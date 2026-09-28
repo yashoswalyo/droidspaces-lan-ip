@@ -1,6 +1,6 @@
 name: Build KernelSU module
 
-on: [push, pull_request, workflow_dispatch]
+on: workflow_dispatch
 
 permissions:
   contents: read
@@ -44,7 +44,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-24.04
     permissions:

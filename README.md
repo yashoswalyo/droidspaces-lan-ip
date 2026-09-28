@@ -59,6 +59,6 @@ Run `sh tests/test.sh`, `sh tests/policy-rule.sh`, `sh -n scripts/*.sh`, and `no
 
 ## GitHub Actions
 
-When this directory is the root of a GitHub repository, [the build workflow](.github/workflows/build.yml) checks the scripts, builds a KernelSU flashable ZIP with `module.prop` at the archive root, and uploads it as an Actions artifact on pushes, pull requests, and manual runs. Download the artifact from the workflow run, extract it once, and install the contained `.zip` in KernelSU Manager.
+When this directory is the root of a GitHub repository, manually start [the build workflow](.github/workflows/build.yml) from the Actions tab. It checks the scripts, builds a KernelSU flashable ZIP with `module.prop` at the archive root, and uploads it as an Actions artifact. Download the artifact from the workflow run, extract it once, and install the contained `.zip` in KernelSU Manager.
 
-Pushing a version tag such as `v1.0.0` also creates a GitHub Release with the ZIP attached. The tag must match `version=1.0.0` in `module.prop`; update that value before tagging a new version. The module ZIP is available directly from the Release page without the extra Actions artifact wrapper.
+To create a GitHub Release with the ZIP attached, manually run the workflow on a version tag such as `v1.0.0`. The tag must match `version=1.0.0` in `module.prop`; update that value before tagging a new version. The module ZIP is available directly from the Release page without the extra Actions artifact wrapper.
