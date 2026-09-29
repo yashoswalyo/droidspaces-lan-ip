@@ -14,9 +14,10 @@ jobs:
       - name: Check scripts and configuration
         run: |
           set -eu
-          sh -n build.sh boot-completed.sh uninstall.sh scripts/api.sh scripts/lib.sh scripts/worker.sh tests/test.sh tests/policy-rule.sh
+          sh -n build.sh boot-completed.sh uninstall.sh scripts/api.sh scripts/lib.sh scripts/worker.sh tests/test.sh tests/policy-rule.sh tests/worker-log.sh
           sh tests/test.sh
           sh tests/policy-rule.sh
+          sh tests/worker-log.sh
           node --check webroot/app.js
 
       - name: Build and verify flashable ZIP

@@ -20,7 +20,7 @@ The module targets the Droidspaces 6.6.0 layout: `/data/local/Droidspaces/Contai
 
 The WebUI shows the phone's current Wi-Fi address, the daemon status, and each NAT container's mapping state. **Active** means the address, host route, proxy ARP entry, and LAN policy rule were found. **Pending** means the module has saved an IP but has not completed all network steps. **Stopped** means the container is not running. **Other LAN** means the phone's Wi-Fi address has changed since assignment; the module removes that mapping until you assign an address for the new LAN.
 
-Configuration is stored in `/data/adb/droidspaces-lan-ip/assignments`, separate from the module directory so a module update can retain it. Each line is `container|LAN_IP|phone_IP/prefix`. The worker's output is in `/data/adb/droidspaces-lan-ip/worker.log`.
+Configuration is stored in `/data/adb/droidspaces-lan-ip/assignments`, separate from the module directory so a module update can retain it. Each line is `container|LAN_IP|phone_IP/prefix`. The worker logs startup, daemon changes, sync failures, and a successful sync roughly every 15 minutes while active to `/data/adb/droidspaces-lan-ip/worker.log`. The WebUI shows its latest 200 lines below the container cards and refreshes them every five seconds.
 
 ### Existing LAN IP watchers
 
@@ -55,7 +55,7 @@ The container should show the assigned `/32` alongside its `172.28.x.x` address.
 
 ## Build and test locally
 
-Run `sh tests/test.sh`, `sh tests/policy-rule.sh`, `sh -n scripts/*.sh`, and `node --check webroot/app.js` from this directory. The shell tests use temporary mocks to check configuration operations and LAN policy rule management; they do not modify the phone.
+Run `sh tests/test.sh`, `sh tests/policy-rule.sh`, `sh tests/worker-log.sh`, `sh -n scripts/*.sh`, and `node --check webroot/app.js` from this directory. The shell tests use temporary mocks to check configuration operations, LAN policy rule management, and worker logging; they do not modify the phone.
 
 ## GitHub Actions
 

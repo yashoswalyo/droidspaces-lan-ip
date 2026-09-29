@@ -3,9 +3,25 @@ const containersEl = document.getElementById("containers");
 const savedEl = document.getElementById("saved-list");
 const savedSection = document.getElementById("saved-section");
 const noticeEl = document.getElementById("notice");
+const logEl = document.getElementById("worker-log");
 const refreshEl = document.getElementById("refresh");
 let callbackId = 0;
 let busy = false;
+let logsBusy = false;
+
+function updateKeyboardInset() {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+  document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", updateKeyboardInset);
+  window.visualViewport.addEventListener("scroll", updateKeyboardInset);
+  window.addEventListener("resize", updateKeyboardInset);
+  updateKeyboardInset();
+}
 
 function shellQuote(value) {
   return `'${String(value).replaceAll("'", `'\\''`)}'`;
@@ -181,6 +197,21 @@ async function refresh(showMessage = true) {
   }
 }
 
+async function refreshLogs() {
+  if (logsBusy || document.hidden) return;
+  logsBusy = true;
+  const atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 20;
+  try {
+    const output = await rootExec("if [ -f /data/adb/droidspaces-lan-ip/worker.log ]; then /system/bin/tail -n 200 /data/adb/droidspaces-lan-ip/worker.log; fi");
+    logEl.textContent = output || "No activity logged yet.";
+  } catch (error) {
+    logEl.textContent = error.message || String(error);
+  } finally {
+    if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+    logsBusy = false;
+  }
+}
+
 refreshEl.addEventListener("click", async () => {
   if (busy) return;
   setBusy(true);
@@ -193,3 +224,5 @@ refreshEl.addEventListener("click", async () => {
   }
 });
 refresh().catch(() => {});
+refreshLogs();
+setInterval(refreshLogs, 5000);
