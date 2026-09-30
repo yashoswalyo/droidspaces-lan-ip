@@ -1,64 +1,86 @@
-# Droidspaces LAN IP (KernelSU module)
+# 🌐 Droidspaces LAN IP
 
-This module gives a **Droidspaces NAT container** a separate IPv4 address on the phone's Wi-Fi LAN. It uses the container's existing `172.28.x.x` NAT link, a `/32` address inside the container, a host route through `ds-br0`, and a proxy ARP entry on `wlan0`. The phone keeps its own address and Wi-Fi MAC. The module does not change a container's network mode, start or stop containers, or configure applications inside them.
+Give a Droidspaces NAT container its own IPv4 address on the phone's Wi-Fi LAN. Other devices on that LAN can use the address to reach services in the container. The phone keeps its own IP address and Wi-Fi MAC; the container does not get a separate MAC or a public IP.
 
-The module targets the Droidspaces 6.6.0 layout: `/data/local/Droidspaces/Containers/*/container.config`, `/data/local/Droidspaces/bin/droidspaces`, `ds-br0`, and NAT gateway `172.28.0.1`. It uses KernelSU's `webroot` WebUI and `boot-completed.sh` script. The worker waits for the Droidspaces daemon and checks saved mappings every 15 seconds, so it can reapply them after a container restart. It also installs a policy rule for the phone's Wi-Fi subnet, which Android needs to forward traffic to the container and answer proxy ARP. [KernelSU module guide](https://kernelsu.org/guide/module.html), [KernelSU WebUI guide](https://kernelsu.org/guide/module-webui.html)
+## 📦 Install and assign an address
 
-## Screenshots
+You need Droidspaces with a container in **NAT mode**, a phone connected to Wi-Fi, and a root manager with module WebUI support: **KernelSU, APatch, ReSukiSU, or KernelSU Next**. This module targets the Droidspaces 6.6.0 network layout. Keep the Droidspaces module enabled.
 
-| Module list                                                                                                                                    | Module WebUI                                                                                                                                | Droidspaces panel                                                                                                                                     | Termux verification                                                                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| <a href="research/modules_list.jpg"><img src="research/modules_list.jpg" alt="Droidspaces LAN IP in the KernelSU module list" width="180"></a> | <a href="research/module_webui.jpg"><img src="research/module_webui.jpg" alt="LAN address assignments in the module WebUI" width="180"></a> | <a href="research/droidspaces_panel.jpg"><img src="research/droidspaces_panel.jpg" alt="Droidspaces panel showing container addresses" width="180"></a> | <a href="research/termux.jpg"><img src="research/termux.jpg" alt="Termux ping results for two container addresses" width="180"></a> |
+1. Choose an unused IPv4 address on the **same Wi-Fi subnet as the phone**. Reserve it or exclude it from your router's DHCP pool. Each container needs a different address. The module rejects duplicate saved assignments, but it cannot detect every address already used by another LAN device.
+2. On the phone, download the GitHub Actions-built module ZIP from [GitHub Releases](https://github.com/yashoswalyo/droidspaces-lan-ip/releases). Download the `.zip` attached to a release, not the source-code archive.
+3. Open your KernelSU, APatch, ReSukiSU, or KernelSU Next app, install the ZIP from its **Modules** screen, and reboot.
+4. In the same app, open the **Droidspaces LAN IP** module WebUI. Find the NAT container, enter the chosen address, and tap **Assign IP**. Host-mode containers are not listed. You can save an assignment while a container is stopped; it applies when Droidspaces and the container are running.
+5. From another device on the LAN, ping the assigned address. Then connect to a service running inside the container using that address and the service's listening port. A successful ping does not mean an application is listening.
 
-## Install and assign an address
+The WebUI shows the phone's current Wi-Fi address, the Droidspaces daemon status, and each NAT container's state. An **assignment** is the address saved for a container and the phone's Wi-Fi address/prefix when you saved it. A **mapping** is the live network setup that makes that address reachable.
 
-1. Choose an unused IP on the **same Wi-Fi subnet as the phone**, and reserve or exclude it in your router's DHCP settings. The module checks the subnet and prevents duplicate assignments within its own config; it cannot detect every other device that might use the address.
-2. From this directory, build the ZIP with `sh build.sh`. The file is `dist/droidspaces-lan-ip-1.0.0.zip`. The version in the filename comes from `module.prop`.
-3. Install that ZIP in KernelSU Manager and reboot. Keep the Droidspaces module enabled. Open the **Droidspaces LAN IP** WebUI in KernelSU Manager.
-4. Find the desired NAT container, enter the chosen IP, and tap **Assign IP**. Containers in host mode are not shown. The value is saved even if the container is stopped; it applies when the Droidspaces daemon and that container are running.
-5. From another device on the LAN, ping the assigned IP and connect to a service that is actually listening inside the container. Use the container's assigned IP and the service's listening port in the URL.
+| State          | Meaning                                                                                                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Unassigned** | No address is saved for this container.                                                                                                                                                                                   |
+| **Stopped**    | An address is saved, but the container is not running.                                                                                                                                                                    |
+| **Other LAN**  | The phone's Wi-Fi address or prefix differs from the value saved with the assignment. This can happen even on the same subnet. The module removes the live mapping until you assign an address on the current connection. |
+| **Pending**    | An address is saved, but the live mapping is not complete yet. Check the daemon status and worker log if it persists.                                                                                                     |
+| **Active**     | The container address, routes, proxy ARP entry, and LAN policy rule are present.                                                                                                                                          |
 
-The WebUI shows the phone's current Wi-Fi address, the daemon status, and each NAT container's mapping state. **Active** means the address, host route, proxy ARP entry, and LAN policy rule were found. **Pending** means the module has saved an IP but has not completed all network steps. **Stopped** means the container is not running. **Other LAN** means the phone's Wi-Fi address has changed since assignment; the module removes that mapping until you assign an address for the new LAN.
+## 🔄 Change or remove an address
 
-Configuration is stored in `/data/adb/droidspaces-lan-ip/assignments`, separate from the module directory so a module update can retain it. Each line is `container|LAN_IP|phone_IP/prefix`. The worker logs startup, daemon changes, sync failures, and a successful sync roughly every 15 minutes while active to `/data/adb/droidspaces-lan-ip/worker.log`. The WebUI shows its latest 200 lines below the container cards and refreshes them every five seconds.
+To change a container's address, edit its field in the WebUI and tap **Update IP**. The module replaces the saved assignment and removes the old mapping.
 
-### Existing LAN IP watchers
+To remove an assignment, tap **Remove** followed by its address on that container's card. The module removes the saved assignment and its live network setup. The container stays in NAT mode. If the container has changed modes or no longer exists, its assignment appears under **Saved for other modes**, where you can still remove it.
 
-If you previously installed a separate LAN IP watcher for a container, disable it **before** assigning that container an IP through this module. Otherwise the older watcher can restore its address after the WebUI removes it. On the Android host, rename its script in `/data/adb/service.d` so KernelSU no longer starts it, then reboot or stop that watcher's process.
+To remove all assignments, remove them one at a time or uninstall the module in your root manager. Uninstall cleans up saved mappings and deletes the module's data. Reboot after uninstall to stop its boot worker. If you only disable the module, reboot for that change to take effect; live mappings may remain until then.
 
-The module does not alter older scripts automatically. If you stop a watcher manually, stop its process rather than the container process.
+## ⚙️ How it works
 
-## Remove or change one container's address
+The module leaves the container in NAT mode. It adds the assigned `/32` address inside the container, a route back to the Wi-Fi subnet, a host route through the existing `ds-br0` NAT link, and a proxy ARP entry on `wlan0`. It also adds a policy rule so Android can route traffic to LAN peers through its main table. The phone answers ARP with its own Wi-Fi MAC and forwards packets to the container. The module does not start containers or configure applications inside them. See the [networking guide](research/droidspaces-lan-ip-guide.md) for the underlying method.
 
-Open the WebUI and tap **Remove IP** on that container's card. This deletes the saved assignment and removes its container `/32` address, LAN route, host route, and proxy ARP entry. The container stays in NAT mode. If its config has changed to host mode, the saved entry appears under **Saved for other modes** so it can still be removed. To change an IP, edit the input and tap **Update IP**; the old mapping is removed.
+The default Droidspaces 6.6.0 layout uses `ds-br0`, NAT gateway `172.28.0.1`, and `wlan0` for Wi-Fi. The module expects Droidspaces container configs and its binary under `/data/local/Droidspaces/`.
 
-If a container still has an older proxy IP from a manual setup or startup script, the WebUI lists it under **Other proxy addresses on this container**. **Remove extra IP** clears that specific address, route, and proxy entry and reapplies the saved address as the container's LAN source. Stop any older startup script first, or it will recreate the extra IP.
+<details open>
+<summary><b>Screenshots</b></summary>
 
-To remove every mapping, remove them one by one or uninstall the module in KernelSU Manager. Uninstall runs a network cleanup and deletes `/data/adb/droidspaces-lan-ip`. Reboot after uninstall to stop its boot worker. Disabling a module in KernelSU without uninstalling takes effect after a reboot; existing live mappings may remain until then.
+| Module list                               | Module WebUI                        |
+| ----------------------------------------- | ----------------------------------- |
+| ![module list](research/modules_list.jpg) | ![WebUI](research/module_webui.jpg) |
 
-## Check a mapping from a root shell
+| Droidspaces panel                                    | LAN verification                     |
+| ---------------------------------------------------- | ------------------------------------ |
+| ![Droidspaces panel](research/droidspaces_panel.jpg) | ![ping results](research/termux.jpg) |
 
-Set `NAME` and `LAN_IP` to the selected container and its assigned address:
+</details>
+
+
+## 🛠️ Troubleshooting
+
+| Symptom                                             | What to check                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No NAT container appears                            | Set the container to NAT mode in Droidspaces. Host-mode containers are not listed.                                                                                                                                                                                                              |
+| Assignment stays **Stopped**                        | Start the container. A saved assignment can wait for it to start.                                                                                                                                                                                                                               |
+| Assignment shows **Other LAN**                      | The phone's current Wi-Fi address or prefix changed. Enter an unused address on the current Wi-Fi subnet and tap **Update IP**.                                                                                                                                                                 |
+| Assignment stays **Pending**                        | Confirm Droidspaces is enabled and its daemon and the container are running. Check the **Worker log** below the container cards for sync errors.                                                                                                                                                |
+| Ping fails from another LAN device                  | Check that the address is unused and reserved outside DHCP. Some Wi-Fi networks isolate wireless clients and block device-to-device traffic. Use the root-shell checks below to inspect the mapping.                                                                                            |
+| Ping works but the application does not connect     | Check that the application is running inside the container and listening on the expected port and address.                                                                                                                                                                                      |
+| An old address returns after removal                | Disable any separate LAN IP watcher or startup script that assigned it. A script in `/data/adb/service.d` can recreate an address after this module removes it. Rename or disable that script, then reboot or stop the watcher's process. Stop the watcher, not the container.                  |
+| **Other proxy addresses on this container** appears | An older manual setup or script may have left another address. After stopping that setup, tap **Remove extra IP** for the listed address. The WebUI offers this only when the address, host route, and proxy entry point to that container; it then reapplies the saved assignment if possible. |
+
+The WebUI displays the latest 200 lines of the worker log and refreshes them every five seconds. The worker waits for the Droidspaces daemon and checks assignments every 15 seconds, including after a container restart.
+
+## 🔍 Check a mapping from a root shell
+
+Set `NAME` and `LAN_IP` to the container name and its assigned address on the Android host:
 
 ```sh
 NAME=your-container
 LAN_IP=your-assigned-ip
-PID=$(droidspaces --name="$NAME" pid)
-nsenter -t "$PID" -n -- ip -4 addr show dev eth0
-nsenter -t "$PID" -n -- ip -4 route show
-ip -4 route show "$LAN_IP/32"
-ip neigh show proxy dev wlan0
+PID=$(/data/local/Droidspaces/bin/droidspaces --name="$NAME" pid)
+/system/bin/nsenter -t "$PID" -n -- /system/bin/ip -4 addr show dev eth0
+/system/bin/nsenter -t "$PID" -n -- /system/bin/ip -4 route show
+/system/bin/ip -4 route show "$LAN_IP/32"
+/system/bin/ip neigh show proxy dev wlan0
+/system/bin/ip -4 rule show
 /system/bin/sh /data/adb/modules/droidspaces-lan-ip/scripts/api.sh list
 ```
 
-The container should show the assigned `/32` alongside its `172.28.x.x` address. The host route should point via that NAT IP on `ds-br0`, and the proxy neighbor entry should list the assigned LAN IP. If a browser cannot connect but ping works, check that the application is running and listening on the expected port inside the container. Some Wi-Fi networks isolate wireless clients and can block LAN access even when the mapping is correct.
+The container should have the assigned `/32` address alongside its `172.28.x.x` NAT address. Its LAN route should use the assigned address as the source. On the phone, the host route should point through `ds-br0` to the container's NAT address; the proxy entry should list the assigned address; and a rule at priority `6091` should direct the Wi-Fi subnet to the main routing table.
 
-## Build and test locally
-
-Run `sh tests/test.sh`, `sh tests/policy-rule.sh`, `sh tests/worker-log.sh`, `sh -n scripts/*.sh`, and `node --check webroot/app.js` from this directory. The shell tests use temporary mocks to check configuration operations, LAN policy rule management, and worker logging; they do not modify the phone.
-
-## GitHub Actions
-
-When this directory is the root of a GitHub repository, manually start [the build workflow](.github/workflows/build.yml) from the Actions tab. It checks the scripts, builds a KernelSU flashable ZIP with `module.prop` at the archive root, and uploads it as an Actions artifact. Download the artifact from the workflow run, extract it once, and install the contained `.zip` in KernelSU Manager.
-
-To create a GitHub Release with the ZIP attached, manually run the workflow on a version tag such as `v1.0.0`. The tag must match `version=1.0.0` in `module.prop`; update that value before tagging a new version. The module ZIP is available directly from the Release page without the extra Actions artifact wrapper.
+Assignments live in `/data/adb/droidspaces-lan-ip/assignments`, separate from the module directory so updates can retain them. Worker messages and sync errors live in `/data/adb/droidspaces-lan-ip/worker.log`.
