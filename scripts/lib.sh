@@ -208,6 +208,8 @@ remove_mapping() (
     if "$IP_BIN" -4 route show "$lan_ip/32" 2>/dev/null | grep -Fq "dev $BRIDGE"; then
         "$IP_BIN" route del "$lan_ip/32" dev "$BRIDGE" 2>/dev/null || true
     fi
+    "$IP_BIN" route del "$lan_ip" dev "$UPLINK" table local 2>/dev/null || true
+    "$IP_BIN" addr del "$lan_ip/32" dev "$UPLINK" 2>/dev/null || true
     "$IP_BIN" neigh del proxy "$lan_ip" dev "$UPLINK" 2>/dev/null || true
 )
 
@@ -236,6 +238,8 @@ apply_mapping() (
     subnet=$(cidr_subnet "$saved_cidr") || return 1
     "$NSENTER_BIN" -t "$pid" -n -- "$IP_BIN" route replace "$subnet" via "$NAT_GATEWAY" dev eth0 src "$lan_ip" || return 1
     "$IP_BIN" route replace "$lan_ip/32" via "$nat_ip" dev "$BRIDGE" || return 1
+    "$IP_BIN" addr replace "$lan_ip/32" dev "$UPLINK" || return 1
+    "$IP_BIN" route del "$lan_ip" dev "$UPLINK" table local 2>/dev/null || true
     "$IP_BIN" neigh replace proxy "$lan_ip" dev "$UPLINK" || return 1
     # Android policy routing does not normally consult main for Wi-Fi peers.
     # The rule also lets reverse-path validation find those peers.
