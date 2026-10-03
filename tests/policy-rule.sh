@@ -14,6 +14,10 @@ case "$*" in
         ;;
     '-4 route show dev eth0') echo '192.0.2.0/24 via 172.28.0.1 src 192.0.2.111' ;;
     '-4 route show 192.0.2.111/32') echo '192.0.2.111 via 172.28.204.17 dev ds-br0' ;;
+    '-4 -o addr show dev wlan0') echo '192.0.2.111/32' ;;
+    'route del 192.0.2.111 dev wlan0 table local') ;;
+    'addr replace 192.0.2.111/32 dev wlan0') ;;
+    'addr del 192.0.2.111/32 dev wlan0') ;;
     'neigh show proxy dev wlan0') echo '192.0.2.111 proxy' ;;
     '-4 rule show')
         if [ -f "$DSLI_TEST_STATE/rule" ]; then
