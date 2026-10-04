@@ -34,6 +34,14 @@ To remove all assignments, remove them one at a time or uninstall the module in 
 
 The module leaves the container in NAT mode. It adds the assigned `/32` address inside the container, a route back to the Wi-Fi subnet, a host route through the existing `ds-br0` NAT link, and a proxy ARP entry on `wlan0`. It also adds a policy rule so Android can route traffic to LAN peers through its main table. The phone answers ARP with its own Wi-Fi MAC and forwards packets to the container. The module does not start containers or configure applications inside them. See the [networking guide](research/droidspaces-lan-ip-guide.md) for the underlying method.
 
+### Screen-off Wi-Fi ARP offload
+
+The latest release already includes the module-side workaround for Wi-Fi firmware that does not answer proxy ARP while the phone is suspended. Each mapped container address is also assigned as a `/32` on `wlan0`, making it visible to drivers that collect interface addresses for firmware ARP offload. No kernel rebuild or separate periodic gratuitous-ARP script is required for this workaround.
+
+The module removes the automatically created **local-table route** for that Wi-Fi address so packets are forwarded through `ds-br0` instead of delivered to the phone. A main-table host route alone does not override the local table. Removing a mapping also removes its Wi-Fi `/32` address.
+
+Screen-off reachability still depends on the driver and firmware. The MediaTek configuration discussed in the [networking guide](research/droidspaces-lan-ip-guide.md#screen-off-arp-and-firmware-limits) allows three offloaded addresses in total, including the phone's address; it is not a universal device limit or a guarantee for every mapped container.
+
 The default Droidspaces 6.6.0 layout uses `ds-br0`, NAT gateway `172.28.0.1`, and `wlan0` for Wi-Fi. The module expects Droidspaces container configs and its binary under `/data/local/Droidspaces/`.
 
 <details open>
@@ -59,6 +67,7 @@ The default Droidspaces 6.6.0 layout uses `ds-br0`, NAT gateway `172.28.0.1`, an
 | Assignment shows **Other LAN**                      | The phone's current Wi-Fi address or prefix changed. Enter an unused address on the current Wi-Fi subnet and tap **Update IP**.                                                                                                                                                                 |
 | Assignment stays **Pending**                        | Confirm Droidspaces is enabled and its daemon and the container are running. Check the **Worker log** below the container cards for sync errors.                                                                                                                                                |
 | Ping fails from another LAN device                  | Check that the address is unused and reserved outside DHCP. Some Wi-Fi networks isolate wireless clients and block device-to-device traffic. Use the root-shell checks below to inspect the mapping.                                                                                            |
+| Reachability fails only with the screen off          | Use the latest release, which includes the Wi-Fi `/32` ARP-offload workaround. Check that the assigned address appears on `wlan0` and has no local-table route. Driver/firmware offload limits can still affect suspended operation; see the networking guide. |
 | Ping works but the application does not connect     | Check that the application is running inside the container and listening on the expected port and address.                                                                                                                                                                                      |
 | An old address returns after removal                | Disable any separate LAN IP watcher or startup script that assigned it. A script in `/data/adb/service.d` can recreate an address after this module removes it. Rename or disable that script, then reboot or stop the watcher's process. Stop the watcher, not the container.                  |
 | **Other proxy addresses on this container** appears | An older manual setup or script may have left another address. After stopping that setup, tap **Remove extra IP** for the listed address. The WebUI offers this only when the address, host route, and proxy entry point to that container; it then reapplies the saved assignment if possible. |
@@ -76,11 +85,13 @@ PID=$(/data/local/Droidspaces/bin/droidspaces --name="$NAME" pid)
 /system/bin/nsenter -t "$PID" -n -- /system/bin/ip -4 addr show dev eth0
 /system/bin/nsenter -t "$PID" -n -- /system/bin/ip -4 route show
 /system/bin/ip -4 route show "$LAN_IP/32"
+/system/bin/ip -4 addr show dev wlan0
+/system/bin/ip -4 route show table local exact "$LAN_IP/32"
 /system/bin/ip neigh show proxy dev wlan0
 /system/bin/ip -4 rule show
 /system/bin/sh /data/adb/modules/droidspaces-lan-ip/scripts/api.sh list
 ```
 
-The container should have the assigned `/32` address alongside its `172.28.x.x` NAT address. Its LAN route should use the assigned address as the source. On the phone, the host route should point through `ds-br0` to the container's NAT address; the proxy entry should list the assigned address; and a rule at priority `6091` should direct the Wi-Fi subnet to the main routing table.
+The container should have the assigned `/32` address alongside its `172.28.x.x` NAT address. Its LAN route should use the assigned address as the source. On the phone, the host route should point through `ds-br0` to the container's NAT address; `wlan0` should also have the assigned `/32`, but the local-table check should print no route for it. The proxy entry should list the assigned address, and a rule at priority `6091` should direct the Wi-Fi subnet to the main routing table.
 
 Assignments live in `/data/adb/droidspaces-lan-ip/assignments`, separate from the module directory so updates can retain them. Worker messages and sync errors live in `/data/adb/droidspaces-lan-ip/worker.log`.
